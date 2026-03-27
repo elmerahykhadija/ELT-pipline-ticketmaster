@@ -1,0 +1,8 @@
+# Environnements virtuels
+.venv/
+
+# Fichiers de configuration sensibles
+.env
+__pycache__/
+*.pyc
+*.log
