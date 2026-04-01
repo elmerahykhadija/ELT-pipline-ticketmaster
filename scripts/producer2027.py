@@ -6,7 +6,7 @@ import requests
 from dotenv import load_dotenv
 from datetime import datetime
 
-# --- 1. Chargement de la configuration ---
+# --- 1. Configuration et API Key ---
 load_dotenv()
 api_key = os.getenv("API_KEY")
 if not api_key:
@@ -17,7 +17,7 @@ if not api_key:
 try:
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(
-            host="localhost",
+            host="rabbitmq",
             credentials=pika.PlainCredentials("admin", "admin123")
         )
     )
@@ -29,7 +29,6 @@ except Exception as e:
 
 # --- 3. Fonctions utilitaires ---
 def generate_month_ranges(year):
-    """Génère automatiquement les intervalles mensuels pour une année donnée."""
     months = []
     for month in range(1, 13):
         start = datetime(year, month, 1)
@@ -37,29 +36,29 @@ def generate_month_ranges(year):
             end = datetime(year + 1, 1, 1)
         else:
             end = datetime(year, month + 1, 1)
+
         months.append((
             start.strftime("%Y-%m-%dT%H:%M:%SZ"),
             end.strftime("%Y-%m-%dT%H:%M:%SZ")
         ))
     return months
 
-# --- 4. Paramètres API ---
+# --- 4. Parametres API ---
 url = "https://app.ticketmaster.com/discovery/v2/events.json"
 sent_event_ids = set()
-page_size = 50  # Ticketmaster limite 1000 résultats (20 pages max)
+page_size = 50  # Ticketmaster limite 1000 resultats (20 pages max)
 
-# --- 5. Début du Producer ---
-print("🚀 Producer démarré. Envoi des données par mois...")
+# --- 5. Debut du Producer 2027 ---
+print("Producer 2027 demarre. Envoi des donnees par mois...")
 
 try:
-    # Générer tous les mois de l'année 2026
-    months = generate_month_ranges(2026)
+    months = generate_month_ranges(2027)
 
     for start_date, end_date in months:
-        print(f"📅 Traitement du mois : {start_date} à {end_date}")
-        total_pages = 1  # valeur par défaut
+        print(f"Traitement du mois : {start_date} a {end_date}")
+        total_pages = 1
 
-        # --- Étape 1 : récupérer le nombre total de pages pour le mois ---
+        # --- Etape 1 : requete initiale pour connaitre totalPages ---
         params = {
             "apikey": api_key,
             "size": page_size,
@@ -67,41 +66,42 @@ try:
             "startDateTime": start_date,
             "endDateTime": end_date
         }
+
         try:
             res = requests.get(url, params=params, timeout=20)
             res.raise_for_status()
             data = res.json()
             api_total_pages = data.get("page", {}).get("totalPages", 1)
-            total_pages = min(api_total_pages, 1000 // page_size)  # max 1000 events
+            total_pages = min(api_total_pages, 1000 // page_size)
         except requests.exceptions.HTTPError as e:
-            print(f"⚠️ Erreur HTTP initiale : {e}. Passage au mois suivant.")
+            print(f"Erreur HTTP initiale : {e}. Passage au mois suivant.")
             continue
         except Exception as e:
-            print(f"⚠️ Erreur inconnue : {e}. Passage au mois suivant.")
+            print(f"Erreur inconnue : {e}. Passage au mois suivant.")
             continue
 
-        # --- Étape 2 : boucle sur les pages ---
+        # --- Etape 2 : boucle page par page ---
         for page in range(total_pages):
             params["page"] = page
             try:
-                time.sleep(0.2)  # Respect du rate limit (5 req/sec)
+                time.sleep(0.2)  # respect rate limit
                 res = requests.get(url, params=params, timeout=20)
 
                 if res.status_code == 400:
-                    print(f"ℹ️ Page {page} inaccessible (limite Ticketmaster).")
+                    print(f"Page {page} inaccessible (limite Ticketmaster).")
                     break
 
                 res.raise_for_status()
                 events = res.json().get("_embedded", {}).get("events", [])
 
             except requests.exceptions.HTTPError as e:
-                print(f"⚠️ Erreur HTTP page {page}: {e}")
+                print(f"Erreur HTTP page {page}: {e}")
                 continue
             except Exception as e:
-                print(f"⚠️ Erreur inconnue page {page}: {e}")
+                print(f"Erreur inconnue page {page}: {e}")
                 continue
 
-            # --- Étape 3 : envoi vers RabbitMQ ---
+            # --- Etape 3 : publication RabbitMQ ---
             sent_count = 0
             for event in events:
                 event_id = event.get("id")
@@ -131,20 +131,20 @@ try:
                     exchange="",
                     routing_key="events_queue",
                     body=json.dumps(msg, ensure_ascii=False),
-                    properties=pika.BasicProperties(delivery_mode=2)  # persistant
+                    properties=pika.BasicProperties(delivery_mode=2)
                 )
                 sent_count += 1
 
-            print(f"📄 Page {page} : {sent_count} nouveaux messages envoyés.")
+            print(f"Page {page} : {sent_count} nouveaux messages envoyes.")
 
-        print(f"✅ Mois {start_date} terminé. Total unique envoyés : {len(sent_event_ids)}")
-        print("⏱ Pause de 5 secondes avant le mois suivant...")
+        print(f"Mois {start_date} termine. Total unique envoyes : {len(sent_event_ids)}")
+        print("Pause de 5 secondes avant le mois suivant...")
         time.sleep(5)
 
 except KeyboardInterrupt:
-    print("\n🛑 Arrêt demandé par l'utilisateur.")
+    print("Arret demande par l utilisateur.")
 
 finally:
-    if 'connection' in locals() and connection.is_open:
+    if "connection" in locals() and connection.is_open:
         connection.close()
-        print("🔌 Connexion RabbitMQ fermée proprement.")
+        print("Connexion RabbitMQ fermee proprement.")

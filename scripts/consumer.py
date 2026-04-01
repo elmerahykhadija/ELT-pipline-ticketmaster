@@ -55,7 +55,7 @@ def callback(ch, method, properties, body):
 # --- CONNEXION RABBITMQ ---
 connection = pika.BlockingConnection(
     pika.ConnectionParameters(
-        host="localhost", 
+        host="rabbitmq", 
         credentials=pika.PlainCredentials("admin", "admin123")
     )
 )
@@ -68,16 +68,20 @@ channel.queue_declare(queue="events_queue", durable=True)
 # 🔥 Très important pour Snowflake (évite surcharge)
 channel.basic_qos(prefetch_count=1)
 
-print(' [*] Lecture des messages ...')
-
-channel.basic_consume(
-    queue='events_queue',
-    on_message_callback=callback,
-    auto_ack=False  # ❌ plus jamais True ici
-)
+print(' [*] Lecture des messages existants dans la queue ...')
 
 try:
-    channel.start_consuming()
+    while True:
+        # Récupère un message de la queue (non bloquant)
+        method_frame, header_frame, body = channel.basic_get(queue='events_queue', auto_ack=False)
+        
+        if method_frame:
+            # Traite le message avec la même fonction callback
+            callback(channel, method_frame, header_frame, body)
+        else:
+            # Plus de messages dans la queue
+            print(' [*] La queue est vide. Arrêt du consumer.')
+            break
 except KeyboardInterrupt:
     print("\n [!] Arrêt manuel du consumer.")
 finally:
