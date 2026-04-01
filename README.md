@@ -12,9 +12,14 @@
 ---
 ## 📌 Project Overview
 
-This project focuses on building a robust ELT (Extract, Load, Transform) data pipeline. The objective is to collect global event data via the Ticketmaster API for the years 2026 and 2027, enabling decision-making analysis and strategic planning.
+This project builds a **scalable end-to-end ELT data pipeline** to collect and process global event data from the Ticketmaster API (2026–2027).
 
-The architecture relies on Airflow, which serves as the orchestrator of the pipelines, a message broker (RabbitMQ) to ensure reliable ingestion, a cloud data warehouse (Snowflake) for storage, and dbt (Data Build Tool) for transforming and modeling data into a star schema.
+It demonstrates a modern **Data Engineering architecture** combining:
+
+- Apache Airflow for orchestration  
+- RabbitMQ for asynchronous ingestion  
+- Snowflake as a cloud data warehouse  
+- dbt for transformation & data modeling
 ---
 
 ## 🏗️ Technical Architecture
@@ -53,13 +58,21 @@ The data flow follows these steps:
 
 The pipeline collects and processes **event-related data** from the Ticketmaster API. In this project, we only collect the following fields:
 
+### 🎯 Collected Fields
 - **Event ID and Name**  
 - **City and Venue**  
 - **Event Segment** (category/segment of the event)
 
-A known issue with this data source is the presence of **duplicate rows** and **missing values** for the event segment field.
+### ⚠️ Data Quality Issues
+A known issue with this data source is the presence of:
+- **Duplicate rows**  
+- **Missing values** (especially for the event segment field)
 
-The raw JSON data is flattened into the `EVENTS_RAW` table and later cleaned and structured into dimension and fact tables for analytical purposes.
+### 🧱 Data Processing
+The raw JSON data is:
+- Flattened into the `EVENTS_RAW` table  
+- Cleaned and transformed  
+- Structured into **dimension** and **fact tables** for analytical purposes
 ---
 
 ## 🚀 Installation and Usage
@@ -128,7 +141,6 @@ The pipeline is now orchestrated with Airflow through the DAG `elt_dag` located 
 
 ### DAG behavior
 
-- **Schedule:** `@daily`
 - **Catchup:** `False`
 - **Task flow:**
   - `run_producer2026` and `run_producer2027` run in parallel
