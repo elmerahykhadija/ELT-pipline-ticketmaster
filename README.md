@@ -94,7 +94,7 @@ dbt run
 
 ---
 
-### **Section 7 : Airflow Orchestration**
+### Airflow Orchestration
 
 ```markdown
 ## 🌬️ Airflow Orchestration
@@ -114,7 +114,7 @@ Mot de passe : admin
 ---
 
 
-### Section 8 : Déploiement sur AWS EC2
+### Déploiement sur AWS EC2
 ## ☁️ Déploiement sur AWS EC2
 
 Le pipeline est déployé sur une **instance EC2** d’AWS pour une exécution en environnement cloud.
@@ -131,7 +131,7 @@ Le pipeline est déployé sur une **instance EC2** d’AWS pour une exécution e
 6.Configurer le Security Group pour ouvrir les ports nécessaires (ex. : 8080 pour Airflow, 15672 pour l’UI RabbitMQ).
 
 ---
-### **Section 9 : CI/CD Pipeline**
+### CI/CD Pipeline
 
 Le projet dispose d’un pipeline **CI/CD** automatisé avec GitHub Actions :
 - Linting du code Python
@@ -142,7 +142,7 @@ Le projet dispose d’un pipeline **CI/CD** automatisé avec GitHub Actions :
 Le workflow se trouve dans : `.github/workflows/ci-cd.yml`
 
 Le déploiement est configuré pour envoyer et exécuter le pipeline sur une instance **EC2 (Amazon Web Services)**, garantissant une mise en production continue et automatisée.
-### **Section 10 : Data Modeling**
+###  Data Modeling
 
 ```markdown
 ## 📊 Data Modeling (Star Schema)
@@ -157,7 +157,7 @@ Le projet utilise **dbt** pour transformer les données en un schéma optimisé 
   - `DIM_CATEGORIES` → Catégories d’événements
   - `FACT_EVENTS` → Table de faits centrale
 ```
-### **Section 11 : Conclusion**
+### Conclusion
 Ce projet démontre une maîtrise complète du cycle de vie des données : de l’extraction asynchrone jusqu’à la modélisation analytique en passant par le déploiement cloud et l’automatisation CI/CD.
 
 **Technologies mises en œuvre** : Airflow, RabbitMQ, Snowflake, dbt, Docker, AWS EC2 et GitHub Actions.
