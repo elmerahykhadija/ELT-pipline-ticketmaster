@@ -1,198 +1,166 @@
-# 🎟️ End-to-End ELT Pipeline
+# 🎟️ End-to-End ELT Pipeline - Ticketmaster
+
 ![Python](https://img.shields.io/badge/Python-3.12-blue.svg)
 ![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-Orchestration-red.svg)
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-Message%20Broker-FF6600.svg)
 ![Snowflake](https://img.shields.io/badge/Snowflake-Data%20Warehouse-blue.svg)
 ![dbt](https://img.shields.io/badge/dbt-Transformation-orange.svg)
 ![Docker](https://img.shields.io/badge/Docker-Containerization-2496ED.svg)
-![Ticketmaster API](https://img.shields.io/badge/API-Ticketmaster-purple.svg)
+![AWS](https://img.shields.io/badge/AWS-EC2-orange.svg)
+![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue.svg)
 ![ELT Pipeline](https://img.shields.io/badge/Pipeline-ELT-green.svg)
-![Architecture](https://img.shields.io/badge/Architecture-Star%20Schema-yellow.svg)
-![Data Modeling](https://img.shields.io/badge/Modeling-Bronze%2FSilver%2FGold-lightgrey.svg)
 ---
 ## 📌 Project Overview
 
-This project builds a **scalable end-to-end ELT data pipeline** to collect and process global event data from the Ticketmaster API (2026–2027).
+Ce projet consiste à construire un **pipeline ELT end-to-end scalable** qui collecte et traite les données d’événements mondiaux provenant de la **Ticketmaster Discovery API** pour les années 2026–2027.
 
-It demonstrates a modern **Data Engineering architecture** combining:
-
-- Apache Airflow for orchestration  
-- RabbitMQ for asynchronous ingestion  
-- Snowflake as a cloud data warehouse  
-- dbt for transformation & data modeling
----
-
+Il met en œuvre une architecture moderne de Data Engineering combinant :
+- Orchestration avec **Apache Airflow**
+- Ingestion asynchrone via **RabbitMQ**
+- Stockage et analyse dans **Snowflake**
+- Transformations et modélisation avec **dbt**
 ## 🏗️ Technical Architecture
 
 ![Architecture](img/architecture.png)
 
-The data flow follows these steps:
+Le flux de données suit ces étapes principales :
 
-- **Extraction (Python Producers):**  
-  Retrieve JSON data from the Ticketmaster API with filtering for the years 2026–2027.
-
-- **Transit (RabbitMQ):**  
-  Data is sent to a queue (`events_queue`) to decouple extraction from ingestion.
-
-- **Loading (Python Consumer):**  
-  Reads messages from RabbitMQ and inserts raw data into the `RAW_DATA` table in Snowflake.
-
-- **Transformation (dbt):**  
-  Cleans, types, and models the data in Snowflake to create analytical tables (Dimensions and Facts).
-
----
+- **Extraction** : Scripts Python (Producers) récupèrent les données JSON de l’API Ticketmaster.
+- **Transit** : Les données passent par une file d’attente RabbitMQ (`events_queue`) pour découpler l’extraction de l’ingestion.
+- **Loading** : Le Consumer lit les messages et insère les données brutes dans la table `EVENTS_RAW` de Snowflake.
+- **Transformation** : dbt nettoie, transforme et modélise les données en **Star Schema**.
 
 ## 🛠️ Technology Stack
 
-- **Language:** Python 3.12  
-- **Orchestrator:** Apache Airflow
-- **Message Broker:** RabbitMQ  
-- **Data Warehouse:** Snowflake  
-- **Transformation:** dbt (Data Build Tool)  
-- **Containerization:** Docker & Docker Compose  
-- **API Source:** Ticketmaster Discovery API  
-
----
+- **Langage** : Python 3.12
+- **Orchestrateur** : Apache Airflow
+- **Message Broker** : RabbitMQ
+- **Data Warehouse** : Snowflake
+- **Transformation** : dbt (Data Build Tool)
+- **Containerisation** : Docker & Docker Compose
+- **Cloud / Déploiement** : AWS EC2
+- **CI/CD** : GitHub Actions
+- **Source** : Ticketmaster Discovery API
 
 ## 📊 Data Explanation
 
-The pipeline collects and processes **event-related data** from the Ticketmaster API. In this project, we only collect the following fields:
+Le pipeline collecte les données relatives aux événements Ticketmaster. Dans cette version, seuls les champs suivants sont extraits :
 
-### 🎯 Collected Fields
-- **Event ID and Name**  
-- **City and Venue**  
-- **Event Segment** (category/segment of the event)
+### 🎯 Champs collectés
+- **Event ID** et **Event Name**
+- **City** et **Venue**
+- **Event Segment** (catégorie de l’événement)
 
-### ⚠️ Data Quality Issues
-A known issue with this data source is the presence of:
-- **Duplicate rows**  
-- **Missing values** (especially for the event segment field)
+### ⚠️ Problèmes de qualité des données
+- Doublons
+- Valeurs manquantes (particulièrement sur le champ `segment`)
 
-### 🧱 Data Processing
-The raw JSON data is:
-- Flattened into the `EVENTS_RAW` table  
-- Cleaned and transformed  
-- Structured into **dimension** and **fact tables** for analytical purposes
----
+### 🧱 Traitement des données
+- **Bronze** : Données brutes aplaties dans la table `EVENTS_RAW`
+- **Silver** : Nettoyage, typage et gestion des valeurs manquantes
+- **Gold** : Création de dimensions et de la table de faits pour l’analyse
+## 🚀 Installation et Utilisation (Local)
 
-## 🚀 Installation and Usage
-
-### 1. Prerequisites
-
-- Docker and Docker Compose installed  
-- An active Snowflake account  
-- A Ticketmaster API key  
-
----
+### 1. Prérequis
+- Docker et Docker Compose installés
+- Un compte Snowflake actif
+- Une clé API Ticketmaster
 
 ### 2. Configuration
+Crée un fichier `.env` à la racine du projet avec tes credentials :
 
-Create a `.env` file at the root of the project with your credentials:
-
+```env
 API_KEY=your_api_key
 API_SECRET=your_api_secret
+
 SNOWFLAKE_ACCOUNT=your_account
 SNOWFLAKE_USER=your_username
 SNOWFLAKE_PASS=your_password
-SNOWFLAKE_WAREHOUSE=your_datawarhouse
-SNOWFLAKE_DATABASE=your_db
+SNOWFLAKE_WAREHOUSE=your_warehouse
+SNOWFLAKE_DATABASE=your_database
 SNOWFLAKE_ROLE=your_role
-SNOWFLAKE_SCHEMA=your_schema_initial
+SNOWFLAKE_SCHEMA=your_schema
+```
+### 3. Lancer les services
+```bash
+docker compose -f Docker/docker-compose.yml up --build
+```
+### 4. Transformation avec dbt 
+```bash
+docker compose exec dbt bash
+cd project_ticketmaster
+dbt run
+```
 
 ---
 
-### 3. Start Services
+### **Section 7 : Airflow Orchestration**
 
-Launch the full stack :
+```markdown
+## 🌬️ Airflow Orchestration
 
-docker compose -f Docker/docker-compose.yml up --build  
+La pipeline est orchestrée via le DAG **`elt_dag`** situé dans `dags/elt_dag.py`.
 
----
+**Ordre d’exécution :**
 
-### 4. Run the Pipeline (Manual Mode)
-
-You can still execute extraction and ingestion manually:
-
-- Start the Consumer:
-
-python3 scripts/consumer.py  
-
-- Start the Producers:
-
-python3 scripts/producer2026.py  
-python3 scripts/producer2027.py  
+```text
+[run_producer2026, run_producer2027] >> run_consumer >> run_dbt
+```
+**Accès à l’interface Airflow :**
+URL : http://localhost:8080
+Utilisateur : admin
+Mot de passe : admin
 
 ---
 
-### 5. dbt Transformation
+### **Section 8 : CI/CD Pipeline**
 
-Once data is loaded into Snowflake, run the transformations:
+```markdown
+## 🔄 CI/CD Pipeline (GitHub Actions)
 
-docker compose exec dbt bash  
-cd project_ticketmaster  
-dbt run  
+Le projet dispose d’un pipeline **CI/CD** automatisé avec GitHub Actions :
+- Linting du code Python
+- Exécution des tests unitaires
+- Validation du DAG Airflow
 
----
+Le workflow se trouve dans : `.github/workflows/ci-cd.yml`
 
-## 🌬️ Airflow Orchestration 
+```
+### Section 9 : Déploiement sur AWS EC2
+## ☁️ Déploiement sur AWS EC2
 
-![alt text](img/dag.png)
-The pipeline is now orchestrated with Airflow through the DAG `elt_dag` located in `dags/elt_dag.py`.
+Le pipeline est déployé sur une **instance EC2** d’AWS pour une exécution en environnement cloud.
 
-### DAG behavior
-
-- **Catchup:** `False`
-- **Task flow:**
-  - `run_producer2026` and `run_producer2027` run in parallel
-  - then `run_consumer`
-  - then `run_dbt`
-
-In short:
-
-`[run_producer2026, run_producer2027] >> run_consumer >> run_dbt`
-
-### Access Airflow UI
-
-- URL: `http://localhost:8080`
-- Username: `admin`
-- Password: `admin`
-
-### Trigger the DAG
-
-1. Open Airflow UI.
-2. Enable `elt_dag`.
-3. Click **Trigger DAG** for an immediate run.
-
-### Optional: trigger from CLI
-
-docker compose -f Docker/docker-compose.yml exec airflow-webserver airflow dags trigger elt_dag
-
-### Monitor execution
-
-Use the **Graph** and **Grid** views in Airflow to track each task execution and quickly identify failures/retries.
+### Étapes principales :
+1. Créer et lancer une instance EC2 (type recommandé : t3.medium ou t3.large)
+2. Installer Docker et Docker Compose
+3. Cloner ce repository
+4. Copier le fichier `.env` avec tes credentials
+5. Lancer les containers en arrière-plan :
+   ```bash
+   docker compose -f Docker/docker-compose.yml up -d
+   ```
+6.Configurer le Security Group pour ouvrir les ports nécessaires (ex. : 8080 pour Airflow, 15672 pour l’UI RabbitMQ).
 
 ---
 
+### **Section 10 : Data Modeling**
+
+```markdown
 ## 📊 Data Modeling (Star Schema)
 
-The project uses dbt to transform raw data into a BI-optimized schema:
+Le projet utilise **dbt** pour transformer les données en un schéma optimisé pour la BI :
 
-### 🟤 Bronze (Source)
-- `EVENTS_RAW` (Flattened JSON data)
+- **Bronze** : `EVENTS_RAW` (données brutes)
+- **Silver** : Nettoyage et préparation
+- **Gold** :
+  - `DIM_LOCATION` → Informations géographiques
+  - `DIM_DATE` → Calendrier 2026–2027
+  - `DIM_CATEGORIES` → Catégories d’événements
+  - `FACT_EVENTS` → Table de faits centrale
+```
+### **Section 11 : Conclusion
+Ce projet démontre une maîtrise complète du cycle de vie des données : de l’extraction asynchrone jusqu’à la modélisation analytique en passant par le déploiement cloud et l’automatisation CI/CD.
 
-### ⚪ Silver (Cleaning)
-- Date formatting  
-- Handling missing values  
+**Technologies mises en œuvre** : Airflow, RabbitMQ, Snowflake, dbt, Docker, AWS EC2 et GitHub Actions.
 
-### 🟡 Gold (Analytics)
-
-- `DIM_LOCATION`: Geographic details  
-- `DIM_DATE`: Calendar for 2026–2027  
-- `DIM_CATEGORIES`: Event categories (e.g., sports, music)  
-- `FACT_EVENTS`: Central fact table linking all dimensions  
-
----
-
-## 🎯 Conclusion
-
-This project demonstrates full mastery of the data lifecycle, from asynchronous ingestion to advanced cloud-based data modeling. Docker ensures portability, while dbt guarantees data quality, consistency, and transformation traceability.
