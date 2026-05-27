@@ -21,7 +21,7 @@ Il met en œuvre une architecture moderne de Data Engineering combinant :
 - Transformations et modélisation avec **dbt**
 ## 🏗️ Technical Architecture
 
-![Architecture](img/ELT-pipline.png)
+![Architecture](img/architecture.png)
 
 Le flux de données suit ces étapes principales :
 
