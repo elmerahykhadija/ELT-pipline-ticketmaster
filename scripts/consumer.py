@@ -1,8 +1,8 @@
-import pika
 import json
 import snowflake.connector
 import os
 from dotenv import load_dotenv
+from kafka import KafkaConsumer # Remplacement de pika
 
 load_dotenv()
 
@@ -22,69 +22,65 @@ except Exception as e:
     print(f"❌ Erreur Snowflake : {e}")
     exit(1)
 
-def callback(ch, method, properties, body):
-    try:
-        event = json.loads(body.decode('utf-8'))
-        
-        sql = """
-        INSERT INTO EVENTS_RAW (id, nom, type, date_locale, heure_locale, date_utc, lieu, ville, segment)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
-        
-        params = (
-            event.get('id'), event.get('nom'), event.get('type'),
-            event.get('date_locale'), event.get('heure_locale'),
-            event.get('date_utc'), event.get('lieu'),
-            event.get('ville'), event.get('segment')
-        )
-        
-        cursor.execute(sql, params)
-        conn.commit()
-
-        print(f" [OK] {event.get('nom')} inséré.")
-
-        # ✅ ACK seulement après succès
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-
-    except Exception as e:
-        print(f" [ERREUR] : {e}")
-
-        # ❗ Option : remettre le message dans la queue
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-
-# --- CONNEXION RABBITMQ ---
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(
-        host="rabbitmq", 
-        credentials=pika.PlainCredentials("admin", "admin123")
+# --- CONNEXION KAFKA ---
+try:
+    consumer = KafkaConsumer(
+        'events_topic',
+        bootstrap_servers=['kafka:29092'],
+        auto_offset_reset='earliest',       # Commence à lire depuis le début si aucun historique de lecture
+        enable_auto_commit=False,           # Nous commiterons manuellement
+        group_id='snowflake_ingestion_group',
+        value_deserializer=lambda m: json.loads(m.decode('utf-8'))
     )
-)
+except Exception as e:
+    print(f"❌ Erreur Kafka : {e}")
+    exit(1)
 
-channel = connection.channel()
-
-# Queue durable
-channel.queue_declare(queue="events_queue", durable=True)
-
-# 🔥 Très important pour Snowflake (évite surcharge)
-channel.basic_qos(prefetch_count=1)
-
-print(' [*] Lecture des messages existants dans la queue ...')
+print(' [*] Lecture des messages existants dans le topic Kafka ...')
 
 try:
+    # On boucle tant que Poll nous retourne des données
     while True:
-        # Récupère un message de la queue (non bloquant)
-        method_frame, header_frame, body = channel.basic_get(queue='events_queue', auto_ack=False)
-        
-        if method_frame:
-            # Traite le message avec la même fonction callback
-            callback(channel, method_frame, header_frame, body)
-        else:
-            # Plus de messages dans la queue
-            print(' [*] La queue est vide. Arrêt du consumer.')
+        # Attend max 5 secondes pour avoir de nouveaux messages
+        msg_pack = consumer.poll(timeout_ms=5000)
+
+        if not msg_pack:
+            print(' [*] Plus de messages à consommer (5s sans recevoir de données). Arrêt du consumer.')
             break
+
+        # S'il y a des données, on itère sur les topics/partitions reçus
+        for tp, messages in msg_pack.items():
+            for message in messages:
+                event = message.value
+                
+                try:
+                    sql = """
+                    INSERT INTO EVENTS_RAW (id, nom, type, date_locale, heure_locale, date_utc, lieu, ville, segment)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """
+                    
+                    params = (
+                        event.get('id'), event.get('nom'), event.get('type'),
+                        event.get('date_locale'), event.get('heure_locale'),
+                        event.get('date_utc'), event.get('lieu'),
+                        event.get('ville'), event.get('segment')
+                    )
+                    
+                    cursor.execute(sql, params)
+                    print(f" [OK] {event.get('nom')} inséré.")
+
+                except Exception as e:
+                    print(f" [ERREUR] Insertion impossible : {e}")
+                    # En production avec Kafka, il faudrait router cela vers un "Dead Letter Topic"
+        
+        conn.commit()
+        # On valide le fait qu'on a bien traité et sauvegardé ces offsets seulement après le commit Snowflake
+        consumer.commit()
+
 except KeyboardInterrupt:
     print("\n [!] Arrêt manuel du consumer.")
 finally:
     cursor.close()
     conn.close()
-    connection.close()
+    if 'consumer' in locals():
+        consumer.close()

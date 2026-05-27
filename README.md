@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue.svg)
 ![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-Orchestration-red.svg)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-Message%20Broker-FF6600.svg)
+![Kafka](https://img.shields.io/badge/Kafka-Event%20Streaming-black.svg)
 ![Snowflake](https://img.shields.io/badge/Snowflake-Data%20Warehouse-blue.svg)
 ![dbt](https://img.shields.io/badge/dbt-Transformation-orange.svg)
 ![Docker](https://img.shields.io/badge/Docker-Containerization-2496ED.svg)
@@ -16,7 +16,7 @@ Ce projet consiste à construire un **pipeline ELT end-to-end scalable** qui col
 
 Il met en œuvre une architecture moderne de Data Engineering combinant :
 - Orchestration avec **Apache Airflow**
-- Ingestion asynchrone via **RabbitMQ**
+- Ingestion asynchrone et streaming d'événements via **Apache Kafka**
 - Stockage et analyse dans **Snowflake**
 - Transformations et modélisation avec **dbt**
 ## 🏗️ Technical Architecture
@@ -26,7 +26,7 @@ Il met en œuvre une architecture moderne de Data Engineering combinant :
 Le flux de données suit ces étapes principales :
 
 - **Extraction** : Scripts Python (Producers) récupèrent les données JSON de l’API Ticketmaster.
-- **Transit** : Les données passent par une file d’attente RabbitMQ (`events_queue`) pour découpler l’extraction de l’ingestion.
+- **Transit** : Les données passent par un topic Kafka (`events_topic`) pour découpler l’extraction de l’ingestion.
 - **Loading** : Le Consumer lit les messages et insère les données brutes dans la table `EVENTS_RAW` de Snowflake.
 - **Transformation** : dbt nettoie, transforme et modélise les données en **Star Schema**.
 
@@ -34,7 +34,7 @@ Le flux de données suit ces étapes principales :
 
 - **Langage** : Python 3.12
 - **Orchestrateur** : Apache Airflow
-- **Message Broker** : RabbitMQ
+- **Event Streaming Platform** : Apache Kafka
 - **Data Warehouse** : Snowflake
 - **Transformation** : dbt (Data Build Tool)
 - **Containerisation** : Docker & Docker Compose
@@ -128,10 +128,7 @@ Le pipeline est déployé sur une **instance EC2** d’AWS pour une exécution e
    ```bash
    docker compose -f Docker/docker-compose.yml up -d
    ```
-6.Configurer le Security Group pour ouvrir les ports nécessaires (ex. : 8080 pour Airflow, 15672 pour l’UI RabbitMQ).
-
----
-### CI/CD Pipeline
+    6.Configurer le Security Group pour ouvrir les ports nécessaires (ex. : 8080 pour Airflow, 9092 pour l'accès externe Kafka).
 
 Le projet dispose d’un pipeline **CI/CD** automatisé avec GitHub Actions :
 - Linting du code Python
@@ -160,5 +157,5 @@ Le projet utilise **dbt** pour transformer les données en un schéma optimisé 
 ### Conclusion
 Ce projet démontre une maîtrise complète du cycle de vie des données : de l’extraction asynchrone jusqu’à la modélisation analytique en passant par le déploiement cloud et l’automatisation CI/CD.
 
-**Technologies mises en œuvre** : Airflow, RabbitMQ, Snowflake, dbt, Docker, AWS EC2 et GitHub Actions.
+**Technologies mises en œuvre** : Airflow, Kafka, Snowflake, dbt, Docker, AWS EC2 et GitHub Actions.
 
